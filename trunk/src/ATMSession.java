@@ -1,5 +1,7 @@
 import java.io.*;
 import java.security.*;
+import java.util.Calendar;
+import java.util.Date;
 import java.net.*;
 
 public class ATMSession implements Session {
@@ -18,6 +20,8 @@ public class ATMSession implements Session {
 	private Key kSession;
 
 	// Additional fields here
+	private int atmNonce;
+	private int bankNonce;
 
 	ATMSession(Socket s, String ID, ATMCard card, PublicKey kBank) {
 		this.s = s;
@@ -95,16 +99,171 @@ public class ATMSession implements Session {
 		}
 	}
 
+	/**
+	 * Ends the session.
+	 */
 	void endSession() {
+		TransactionMessage message = getTransactionMessage();
+		message.setAction(TransactionMessage.END_SESSION);
+		transmitTransactionMessage(message);
+		
+		TransactionMessage response = readTransactionMessage();
+		if (!response.isSuccess()) {
+			throw new RuntimeException("Failed to log out.");
+		}
 	}
 
+	/**
+	 * Handles a deposit.
+	 */
 	void doDeposit() {
+		System.out.println("Enter the deposit amount: ");
+		TransactionMessage message = getTransactionMessage();
+		message.setAction(TransactionMessage.DEPOSIT);
+		message.setAmount(getDouble());
+		// The amount must be greater than zero, if it is not,
+		// print an error message.
+		if (message.getAmount() > 0)
+		{
+			transmitTransactionMessage(message);
+			TransactionMessage response = readTransactionMessage();
+			if (response.isSuccess())
+			{
+				System.out.println("Deposit was successful.");
+			}
+			else {
+				System.out.println("Deposit failed");
+			}
+		}
+		else
+		{
+			System.out.println("Entry was invalid.");
+		}
 	}
 
+	/**
+	 * Handles a withdrawal.
+	 */
 	void doWithdrawal() {
+		System.out.println("Enter the withdrawal amount: ");
+		TransactionMessage message = getTransactionMessage();
+		message.setAction(TransactionMessage.WITHDRAWAL);
+		message.setAmount(getDouble());
+		
+		// Amount must be greater than zero.  If it is not, print
+		// an error message.
+		if (message.getAmount() > 0)
+		{
+			transmitTransactionMessage(message);
+			TransactionMessage response = readTransactionMessage();
+			if (response.isSuccess())
+			{
+				System.out.println("Withdrawal was successful.");
+			}
+			else {
+				System.out.println("Withdrawal failed.");
+			}
+		}
+		else
+		{
+			System.out.println("Entry was invalid.");
+		}
 	}
 
+	/**
+	 * Requests a balance.
+	 */
 	void doBalance() {
+		TransactionMessage message = getTransactionMessage();
+		message.setAction(TransactionMessage.BALANCE);
+		
+		transmitTransactionMessage(message);
+		TransactionMessage response = readTransactionMessage();
+		if (response.isSuccess())
+		{
+			System.out.println("Balance: "+response.getAmount());
+		}
+		else {
+			System.out.println("Balance could not be retrieved.");
+		}
+	}
+	
+	/**
+	 * Transmits an encrypted and signed Transaction Message to the bank.
+	 * 
+	 * @param message
+	 */
+	void transmitTransactionMessage(TransactionMessage message)
+	{
+		try
+		{
+			SignedMessage msg = new SignedMessage(
+			crypto.encryptAES(message,this.kSession), this.kUser, crypto);
+			
+			os.writeObject(msg);
+		} 
+		catch (Exception exc)
+		{
+			throw new RuntimeException (exc);
+		}
+	}
+	
+	/**
+	 * Reads, verifies, and returns a transaction message received from the
+	 * bank server.
+	 */
+	TransactionMessage readTransactionMessage()
+	{
+		TransactionMessage message = null;
+		SignedMessage msg = null;
+		try {
+			// read the message
+			msg = (SignedMessage)is.readObject();
+			
+			// decrypt the TransactionMessage.
+			message = (TransactionMessage)
+					crypto.decryptAES((byte[])msg.getObject(), kSession);
+		
+			// Verify the message by checking the nonce, timestamp,
+			// and signature.
+			Calendar c = Calendar.getInstance();
+			c.setTime(message.getTimestamp());
+			c.add(Calendar.SECOND, 30);
+			if (message.getAtmNonce() != this.atmNonce ||
+				new Date().getTime() > c.getTimeInMillis() ||
+				!crypto.verify((byte[])msg.getObject(), msg.signature, kBank))
+			{
+				throw new RuntimeException("Invalid message received!!!");
+			}
+		}
+		catch (Exception exc) {
+			throw new RuntimeException(exc);
+		}
+		this.bankNonce = message.getBankNonce();
+		return message;
+	}
+	
+	/**
+	 * Creates and returns a TransactionMessage containing default data.
+	 */
+	TransactionMessage getTransactionMessage()
+	{
+		TransactionMessage message = new TransactionMessage();
+		message.setAtmNonce(getATMNonce());
+		message.setBankNonce(this.bankNonce);
+		message.setTimestamp(new Date());
+		
+		return message;
+	}
+	
+	/**
+	 * Creates and returns a nonce that will be used to verify 
+	 * messages from the bank server.
+	 */
+	int getATMNonce()
+	{
+		this.atmNonce = (int) (Math.random() * Integer.MAX_VALUE);
+		return atmNonce;
 	}
 
 	public boolean doTransaction() {
