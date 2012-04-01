@@ -69,7 +69,7 @@ public class BankSession implements Session, Runnable {
     		//Receiving the atmID and the nonce
     		System.out.println("Waiting for first message");
     		msg = (AuthenticationMessage) is.readObject();
-    		System.out.println("First message received by :"+msg.getAtmID());
+    		System.out.println("First message from ATM #"+msg.getAtmID());
     		this.atmID = msg.getAtmID();
     		this.atmNonce = msg.getAtmNonce();
     		
@@ -77,7 +77,7 @@ public class BankSession implements Session, Runnable {
     		msg = getAuthenticationMessage();
     		smsg = new SignedMessage (msg, this.kPrivBank, crypto);
     		os.writeObject(smsg);
-    		System.out.println("Signed Message sent !");
+    		System.out.println("Signed Message sent");
     		
 		} catch (Exception exc) {
 			exc.printStackTrace();
@@ -88,15 +88,16 @@ public class BankSession implements Session, Runnable {
     	try {
 			System.out.println("Waiting for the account number");
 			//Get back the encrypted msg, decrypt it and verify it is correctly shaped
-			msg = readRSAEncrypted();
+			msg = readAuthenticationMessage();
 			if (msg.isSuccess()) {
 				//Then the bank can now try to identify the client
 				this.currAcct=this.accts.getAccount((String)crypto.decryptRSA(msg.getAccountNumber(),kPrivBank));
 				//We send a new message as a challenge
 				msg = getAuthenticationMessage();
 				smsg = new SignedMessage (msg, this.kPrivBank, crypto);
+				
+				System.out.println("Sending challenge");
 				os.writeObject(smsg);
-				System.out.println("Signing challenge sent !");
 			}
 			else {
 				return false;
@@ -113,13 +114,15 @@ public class BankSession implements Session, Runnable {
 		    System.out.println("Waiting for the challenge response");
 		    msg = readChallengeClient();
 		    if (msg.isSuccess()) {
+		    	System.out.println("Challenge success");
 		    	//The server create an AES key
 		    	this.kSession = crypto.makeAESKey();
-		    	msg = getAuthenticationMessage();
 		    	msg.setSessionKey(crypto.encryptRSA(kSession, currAcct.kPub));
-		    	//Then, the server encrypt the message with the client's public key
-		    	//and sign it
+		    	//Then, the server encrypt the AES key with the client's public key
+		    	//and sign the whole message
 		    	smsg = new SignedMessage(msg, this.kPrivBank, crypto);
+		    	
+		    	System.out.println("Sending AES key");
 		    	os.writeObject(smsg);
 		    }
 		    else {
@@ -226,10 +229,10 @@ public class BankSession implements Session, Runnable {
 	}
 	
 	/**
-     * @return Reads, verifies, and returns the message encrypted
-     * by the ATM using RSA
+     * @return Reads, verifies, and returns the message sent
+     * by the ATM
      */
-	AuthenticationMessage readRSAEncrypted()
+	AuthenticationMessage readAuthenticationMessage()
 	{
 		AuthenticationMessage message = null;
 		try {
