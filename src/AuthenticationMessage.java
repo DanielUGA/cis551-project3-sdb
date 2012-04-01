@@ -13,14 +13,14 @@ public class AuthenticationMessage implements Message {
 	private int atmNonce;
 	private int bankNonce;
 	private Date timestamp;
-	private Key sessionKey;
+	private byte[] sessionKey;
 	private boolean Success;
-	private String accountNumber;
+	private byte[] accountNumber;
 	
-	public String getAccountNumber() {
+	public byte[] getAccountNumber() {
 		return accountNumber;
 	}
-	public void setAccountNumber(String accountNumber) {
+	public void setAccountNumber(byte[] accountNumber) {
 		this.accountNumber = accountNumber;
 	}
 	public boolean isSuccess() {
@@ -35,10 +35,10 @@ public class AuthenticationMessage implements Message {
 	public void setAtmID(String atmID) {
 		this.atmID = atmID;
 	}
-	public Key getSessionKey() {
+	public byte[] getSessionKey() {
 		return sessionKey;
 	}
-	public void setSessionKey(Key sessionKey) {
+	public void setSessionKey(byte[] sessionKey) {
 		this.sessionKey = sessionKey;
 	}
 	public int getAtmNonce() {
