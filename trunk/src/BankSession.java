@@ -61,43 +61,51 @@ public class BankSession implements Session, Runnable {
     
     public boolean authenticateUser() {
 
-	// The server waits for the ATM's message, and then  
-    // answer to the challenge
+	// The server waits for the ATM's message, and then check
+    // the account number
     AuthenticationMessage msg = null;
     SignedMessage smsg = null;
     	try {
-    		//Receiving the atmID and the nonce
+    		//Receiving the atmID and the encrypted account number
     		System.out.println("Waiting for first message");
     		msg = (AuthenticationMessage) is.readObject();
     		System.out.println("First message from ATM #"+msg.getAtmID());
     		this.atmID = msg.getAtmID();
     		this.atmNonce = msg.getAtmNonce();
     		
-    		//The bank sign the new message and sends it
+    		//The bank get back the account number
+    		this.currAcct=this.accts.getAccount((String)crypto.decryptRSA(msg.getAccountNumber(),kPrivBank));
+    		
+    		//The bank then send a challenge to verify identity
+    		//(sign it)
     		msg = getAuthenticationMessage();
     		smsg = new SignedMessage (msg, this.kPrivBank, crypto);
+    		
     		os.writeObject(smsg);
-    		System.out.println("Signed Message sent");
+    		System.out.println("Signed Challenge sent");
     		
 		} catch (Exception exc) {
 			exc.printStackTrace();
 			return false;
 		}
     	
-    //Then, the bank now wait for the client's account number
+    //Then, the bank now wait for the answer
     	try {
-			System.out.println("Waiting for the account number");
-			//Get back the encrypted msg, decrypt it and verify it is correctly shaped
-			msg = readAuthenticationMessage();
+			System.out.println("Waiting for challenge's response");
+			//Get back the signed message, and verify it 
+			msg = readChallengeClient();
 			if (msg.isSuccess()) {
-				//Then the bank can now try to identify the client
-				this.currAcct=this.accts.getAccount((String)crypto.decryptRSA(msg.getAccountNumber(),kPrivBank));
-				//We send a new message as a challenge
+				System.out.println("response received");
+				//Then the bank can now send the shared AES key
 				msg = getAuthenticationMessage();
+				this.kSession = crypto.makeAESKey();
+				msg.setSessionKey(crypto.encryptRSA(kSession, currAcct.kPub));
+				//Sign the message
 				smsg = new SignedMessage (msg, this.kPrivBank, crypto);
 				
-				System.out.println("Sending challenge");
+				System.out.println("Sending shared key");
 				os.writeObject(smsg);
+				System.out.println("Authentication over");
 			}
 			else {
 				return false;
@@ -107,31 +115,7 @@ public class BankSession implements Session, Runnable {
 			e.printStackTrace();
 			return false;
 		}
-    	
-    //Now the server finally verify the signed message, come up with an AES shared key
-    //and finally send the message encrypted with the client's public key
-    	try {
-		    System.out.println("Waiting for the challenge response");
-		    msg = readChallengeClient();
-		    if (msg.isSuccess()) {
-		    	System.out.println("Challenge success");
-		    	//The server create an AES key
-		    	this.kSession = crypto.makeAESKey();
-		    	msg.setSessionKey(crypto.encryptRSA(kSession, currAcct.kPub));
-		    	//Then, the server encrypt the AES key with the client's public key
-		    	//and sign the whole message
-		    	smsg = new SignedMessage(msg, this.kPrivBank, crypto);
-		    	
-		    	System.out.println("Sending AES key");
-		    	os.writeObject(smsg);
-		    }
-		    else {
-		    	return false;
-		    }
-		} catch (Exception e) {
-		    return false;
-		}
-  
+    	  
 	return true;
     }
 
@@ -204,7 +188,7 @@ public class BankSession implements Session, Runnable {
 			// read the message
 			msg = (SignedMessage)is.readObject();
 			
-			// decrypt the TransactionMessage.
+			// get back the AuthenticationMessage.
 			message = (AuthenticationMessage) msg.getObject();
 		
 			// Verify the message by checking the nonce, timestamp,
@@ -213,39 +197,9 @@ public class BankSession implements Session, Runnable {
 			c.setTime(message.getTimestamp());
 			c.add(Calendar.SECOND, 30);
 			if (message.getBankNonce() != this.bankNonce ||
-				new Date().getTime() > c.getTimeInMillis())
-			{
-				throw new RuntimeException("Invalid message received!!!");
-			}
-		}
-		catch (Exception exc) {
-			throw new RuntimeException(exc);
-		}
-		// save the atm nonce so that it can be returned for the
-		// next message.
-		this.atmNonce = message.getAtmNonce();
-		message.setSuccess(true);
-		return message;
-	}
-	
-	/**
-     * @return Reads, verifies, and returns the message sent
-     * by the ATM
-     */
-	AuthenticationMessage readAuthenticationMessage()
-	{
-		AuthenticationMessage message = null;
-		try {
-			// read the message
-			message = (AuthenticationMessage)is.readObject();
-		
-			// Verify the message by checking the nonce, timestamp,
-			// and signature.
-			Calendar c = Calendar.getInstance();
-			c.setTime(message.getTimestamp());
-			c.add(Calendar.SECOND, 30);
-			if (message.getBankNonce() != this.bankNonce ||
-				new Date().getTime() > c.getTimeInMillis())
+				new Date().getTime() > c.getTimeInMillis() || 
+				!crypto.verify((byte[])msg.getObject(), msg.signature, 
+												this.currAcct.getKey()))
 			{
 				throw new RuntimeException("Invalid message received!!!");
 			}

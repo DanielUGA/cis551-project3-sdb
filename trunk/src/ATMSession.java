@@ -53,14 +53,15 @@ public class ATMSession implements Session {
 		    return false;
 		}
 		
-		//The ATM tries then to authenticate the bank's server
+		//The ATM tries first then to authenticate the client
 		AuthenticationMessage msg = null;
 		SignedMessage smsg = null;
 		
-		//First, the ATM sends it's ID and a nonce as a challenge 
-		//as a plain text message
+		//First, the ATM sends it's ID and the client's account
+		//number encrypted with the bank's public key
 		try {
 			msg = getAuthenticationMessage();
+			msg.setAccountNumber(crypto.encryptRSA(card.getAcctNum(),kBank));
 			System.out.println("Authentication init...");
 			
 			os.writeObject(msg);
@@ -70,20 +71,19 @@ public class ATMSession implements Session {
 			return false;
 		}
 		
-		//The ATM get back the server's answer and check it
+		//The ATM get back the server's challenge
 		try {
 			System.out.println("Waiting for the bank's response");
 			msg = readAuthenticationMessage();
 			//If the message is indeed coming from the bank
 			if (msg.isSuccess()) {
-				//Then the ATM can send the client's account number to
-				//begin client authentication
-				System.out.println("Challenge successfull, sending account number");
+				System.out.println("Challenge received");
 				msg = getAuthenticationMessage();
-				//We encrypt the account number using the bank's public key
-				msg.setAccountNumber(crypto.encryptRSA(card.getAcctNum(),kBank));
-
-				os.writeObject(msg);
+				//We sign it with the client's private key
+				smsg = new SignedMessage(msg, this.kUser, crypto);
+				
+				System.out.println("Response sent");
+				os.writeObject(smsg);
 			}
 			else {
 				return false;
@@ -95,37 +95,19 @@ public class ATMSession implements Session {
 		
 		//Now we get the challenge for the client's authentication
 		try {
-			System.out.println("Waiting for client's challenge");
+			System.out.println("Waiting for the shared key");
 			msg = readAuthenticationMessage();
 			//If the message comes from the bank
 			if (msg.isSuccess()) {
 				System.out.println("Received");
-				//The ATM send a new signed message
+				//The ATM get back the shared AES key
 				msg = getAuthenticationMessage();
-				smsg = new SignedMessage(msg, this.kUser, crypto);
-				
-				os.writeObject(smsg);
-				System.out.println("Signed message sent");
+				this.kSession = (Key)crypto.decryptRSA(msg.getSessionKey(), kUser);
+				System.out.println("Shared key obtained");
+				System.out.println("Authentication over");
 			}
 			else {
 				return false;
-			}
-		} catch (Exception e)
-		{
-			e.printStackTrace();
-			return false;
-		}
-		
-		//Finally, we get back the Signed and encrypted message
-		try {
-			System.out.println("Waiting for shared key");
-			msg = readAuthenticationMessage();
-			if (msg.isSuccess()){
-				System.out.println("Shared key received");
-				//The ATM get back the shared key
-				this.kSession = (Key)crypto.decryptRSA(msg.getSessionKey(), kUser);
-				//The authentication is done !
-				System.out.println("Authentication over !");
 			}
 		} catch (Exception e)
 		{
