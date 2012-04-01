@@ -200,6 +200,7 @@ public class ATMSession implements Session {
 			if (response.isSuccess())
 			{
 				System.out.println("Deposit was successful.");
+				System.out.println("New Balance: "+response.getAmount());
 			}
 			else {
 				System.out.println("Deposit failed");
@@ -229,6 +230,7 @@ public class ATMSession implements Session {
 			if (response.isSuccess())
 			{
 				System.out.println("Withdrawal was successful.");
+				System.out.println("New Balance: "+response.getAmount());
 			}
 			else {
 				System.out.println("Withdrawal failed.");

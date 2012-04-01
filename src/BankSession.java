@@ -324,6 +324,7 @@ public class BankSession implements Session, Runnable {
     			break;
     		case TransactionMessage.DEPOSIT:
     			currAcct.deposit(message.getAmount());
+    			response.setAmount(this.currAcct.getBalance());
     			response.setSuccess(true);
     			BankServer.log.write(getLogMessage(message, true));
     			
@@ -332,6 +333,7 @@ public class BankSession implements Session, Runnable {
     		case TransactionMessage.WITHDRAWAL:
     			try {
     				currAcct.withdraw(message.getAmount());
+        			response.setAmount(this.currAcct.getBalance());
     				response.setSuccess(true);
         			BankServer.log.write(getLogMessage(message, true));
     			} 
