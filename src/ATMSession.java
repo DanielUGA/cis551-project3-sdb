@@ -44,26 +44,89 @@ public class ATMSession implements Session {
 	public boolean authenticateUser() {
 	System.out.println("Please enter your PIN: ");
 	
-	// First, the smartcard checks the user's pin to get the 
-	// user's private key.
-	try {
-	    String pin = textIn.readLine();
-	    kUser = card.getKey(pin);
-	} catch (Exception e) {
-	    return false;
-	}
-	try {
-	Writer out
-	   = new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
-
-	Reader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
-	out.write("ID="+ID);
-	in.read();
-	} catch (Exception e)
-	{
-		e.printStackTrace();
-	}
-	return false;
+		// First, the smartcard checks the user's pin to get the 
+		// user's private key.
+		try {
+		    String pin = textIn.readLine();
+		    kUser = card.getKey(pin);
+		} catch (Exception e) {
+		    return false;
+		}
+		
+		//The ATM tries then to authenticate the bank's server
+		AuthenticationMessage msg = null;
+		SignedMessage smsg = null;
+		
+		//First, the ATM sends it's ID and a nonce as a challenge 
+		//as a plain text message
+		try {
+			msg = getAuthenticationMessage();
+			System.out.println("First message sent");
+			os.writeObject(msg);
+		} catch (Exception e)
+		{
+			e.printStackTrace();
+			return false;
+		}
+		
+		//The ATM get back the server's answer and check it
+		try {
+			System.out.println("Waiting for the bank's response");
+			msg = readAuthenticationMessage(false);
+			//If the message is indeed coming from the bank
+			if (msg.isSuccess()) {
+				//Then the ATM can send the client's account number to
+				//begin client authentication
+				System.out.println("Sending account number");
+				msg = getAuthenticationMessage();
+				msg.setAccountNumber(card.getAcctNum());
+				//Only the bank can read it
+				byte[] enmsg = crypto.encryptRSA(msg, this.kBank);
+				os.write(enmsg);
+			}
+			else {
+				return false;
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
+		
+		//Now we get the challenge for the client's authentication
+		try {
+			System.out.println("Waiting for client's challenge");
+			msg = readAuthenticationMessage(false);
+			//If the message comes from the bank
+			if (msg.isSuccess()) {
+				//The ATM send a new signed message
+				msg = getAuthenticationMessage();
+				smsg = new SignedMessage(msg, this.kUser, crypto);
+				os.writeObject(smsg);
+				System.out.println("Signed message sent");
+			}
+			else {
+				return false;
+			}
+		} catch (Exception e)
+		{
+			e.printStackTrace();
+			return false;
+		}
+		
+		//Finally, we get back the Signed and encrypted message
+		try {
+			System.out.println("waiting for shared key");
+			msg = readAuthenticationMessage(true);
+			//The ATM get back the shared key
+			this.kSession = msg.getSessionKey();
+			//The authentication is done !
+		} catch (Exception e)
+		{
+			e.printStackTrace();
+			return false;
+		}
+	
+	return true;
     }
 
 	void printMenu() {
@@ -244,6 +307,47 @@ public class ATMSession implements Session {
 	}
 	
 	/**
+	 * Reads, verifies, and returns a transaction message received from the
+	 * bank server.
+	 */
+	AuthenticationMessage readAuthenticationMessage(boolean rsaEncrypted)
+	{
+		AuthenticationMessage message = null;
+		SignedMessage msg = null;
+		try {
+			// read the message
+			msg = (SignedMessage)is.readObject();
+			
+			if (rsaEncrypted) {
+				//This is the message encrypted with the client's public key
+				message = (AuthenticationMessage) crypto.decryptRSA(msg.msg, kUser);
+			}
+			else {
+				message = (AuthenticationMessage) msg.getObject();
+			}
+			
+			// Verify the message by checking the nonce, timestamp,
+			// and signature.
+			Calendar c = Calendar.getInstance();
+			c.setTime(message.getTimestamp());
+			c.add(Calendar.SECOND, 30);
+			
+			if (message.getAtmNonce() != this.atmNonce ||
+				new Date().getTime() > c.getTimeInMillis() ||
+				!crypto.verify(msg.msg, msg.signature, kBank))
+			{
+				throw new RuntimeException("Invalid message received!!!");
+			}
+		}
+		catch (Exception exc) {
+			throw new RuntimeException(exc);
+		}
+		message.setSuccess(true);
+		this.bankNonce = message.getBankNonce();
+		return message;
+	}
+	
+	/**
 	 * Creates and returns a TransactionMessage containing default data.
 	 */
 	TransactionMessage getTransactionMessage()
@@ -254,6 +358,20 @@ public class ATMSession implements Session {
 		message.setTimestamp(new Date());
 		
 		return message;
+	}
+	
+	/**
+	 * Creates and returns an AuthenticationMessage containing default data.
+	 */
+	AuthenticationMessage getAuthenticationMessage()
+	{
+		AuthenticationMessage message = new AuthenticationMessage();
+		message.setAtmID(this.ID);
+		message.setAtmNonce(getATMNonce());
+		message.setBankNonce(this.bankNonce);
+		message.setTimestamp(new Date());
+		
+		return message;	
 	}
 	
 	/**
