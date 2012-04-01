@@ -301,7 +301,7 @@ public class ATMSession implements Session {
 			c.add(Calendar.SECOND, 30);
 			if (message.getAtmNonce() != this.atmNonce ||
 				new Date().getTime() > c.getTimeInMillis() ||
-				!crypto.verify((byte[])msg.getObject(), msg.signature, kBank))
+				!crypto.verify(msg.msg, msg.signature, kBank))
 			{
 				throw new RuntimeException("Invalid message received!!!");
 			}
