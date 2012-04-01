@@ -79,10 +79,9 @@ public class ATMSession implements Session {
 				//begin client authentication
 				System.out.println("Sending account number");
 				msg = getAuthenticationMessage();
-				msg.setAccountNumber(card.getAcctNum());
-				//Only the bank can read it
-				byte[] enmsg = crypto.encryptRSA(msg, this.kBank);
-				os.write(enmsg);
+				msg.setAccountNumber(crypto.encryptRSA(card.getAcctNum(),kBank));
+
+				os.writeObject(msg);
 			}
 			else {
 				return false;
@@ -118,7 +117,7 @@ public class ATMSession implements Session {
 			System.out.println("waiting for shared key");
 			msg = readAuthenticationMessage(true);
 			//The ATM get back the shared key
-			this.kSession = msg.getSessionKey();
+			this.kSession = (Key)crypto.decryptRSA(msg.getSessionKey(), kUser);
 			//The authentication is done !
 		} catch (Exception e)
 		{
@@ -318,13 +317,7 @@ public class ATMSession implements Session {
 			// read the message
 			msg = (SignedMessage)is.readObject();
 			
-			if (rsaEncrypted) {
-				//This is the message encrypted with the client's public key
-				message = (AuthenticationMessage) crypto.decryptRSA(msg.msg, kUser);
-			}
-			else {
-				message = (AuthenticationMessage) msg.getObject();
-			}
+			message = (AuthenticationMessage) msg.getObject();
 			
 			// Verify the message by checking the nonce, timestamp,
 			// and signature.

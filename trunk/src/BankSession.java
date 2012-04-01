@@ -91,7 +91,7 @@ public class BankSession implements Session, Runnable {
 			msg = readRSAEncrypted();
 			if (msg.isSuccess()) {
 				//Then the bank can now try to identify the client
-				this.currAcct=this.accts.getAccount(msg.getAccountNumber());
+				this.currAcct=this.accts.getAccount((String)crypto.decryptRSA(msg.getAccountNumber(),kPrivBank));
 				//We send a new message as a challenge
 				msg = getAuthenticationMessage();
 				smsg = new SignedMessage (msg, this.kPrivBank, crypto);
@@ -116,10 +116,10 @@ public class BankSession implements Session, Runnable {
 		    	//The server create an AES key
 		    	this.kSession = crypto.makeAESKey();
 		    	msg = getAuthenticationMessage();
-		    	msg.setSessionKey(kSession);
+		    	msg.setSessionKey(crypto.encryptRSA(kSession, currAcct.kPub));
 		    	//Then, the server encrypt the message with the client's public key
 		    	//and sign it
-		    	smsg = new SignedMessage(crypto.encryptRSA(msg, this.currAcct.kPub), this.kPrivBank, crypto);
+		    	smsg = new SignedMessage(msg, this.kPrivBank, crypto);
 		    	os.writeObject(smsg);
 		    }
 		    else {
@@ -232,14 +232,9 @@ public class BankSession implements Session, Runnable {
 	AuthenticationMessage readRSAEncrypted()
 	{
 		AuthenticationMessage message = null;
-		byte[] enmsg = null;
 		try {
 			// read the message
-			enmsg = (byte[])is.readObject();
-			
-			// decrypt the TransactionMessage.
-			message = (AuthenticationMessage)
-					crypto.decryptRSA(enmsg, this.kPrivBank);
+			message = (AuthenticationMessage)is.readObject();
 		
 			// Verify the message by checking the nonce, timestamp,
 			// and signature.
