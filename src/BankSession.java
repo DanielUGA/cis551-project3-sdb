@@ -177,7 +177,7 @@ public class BankSession implements Session, Runnable {
 			c.add(Calendar.SECOND, 30);
 			if (message.getBankNonce() != this.bankNonce ||
 				new Date().getTime() > c.getTimeInMillis() ||
-				!crypto.verify((byte[])msg.getObject(), msg.signature, 
+				!crypto.verify(msg.msg, msg.signature, 
 												this.currAcct.getKey()))
 			{
 				throw new RuntimeException("Invalid message received!!!");
@@ -343,7 +343,7 @@ public class BankSession implements Session, Runnable {
     			break;
     		case TransactionMessage.END_SESSION:
     			response.setSuccess(true);
-    			BankServer.log.write(getLogMessage(message, false));
+    			BankServer.log.write(getLogMessage(message, true));
     		}
     	}
     	transmitTransactionMessage(response);
@@ -363,6 +363,7 @@ public class BankSession implements Session, Runnable {
     	msg.setAction(message.getAction());
     	msg.setAmount(message.getAmount());
     	msg.setSuccessful(success);
+    	msg.setTimestamp(new Date());
     	msg.setAcctNumber(this.currAcct.getNumber());
     	return msg;
     }
