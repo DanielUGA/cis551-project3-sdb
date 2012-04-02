@@ -69,34 +69,43 @@ public class BankSession implements Session, Runnable {
     	try {
     		//Receiving the atmID and the encrypted account number
     		System.out.println("Waiting for first message");
+    		BankServer.log.write("Waiting for first message");
     		msg = (AuthenticationMessage) is.readObject();
-    		System.out.println("First message from ATM #"+msg.getAtmID());
+    		System.out.println("Got first message from ATM #"+msg.getAtmID());
+    		BankServer.log.write("Got first message from ATM #"+msg.getAtmID());
     		this.atmID = msg.getAtmID();
     		this.atmNonce = msg.getAtmNonce();
     		
     		//The bank get back the account number and account name
     		this.currAcct=this.accts.getAccount((String)crypto.decryptRSA(msg.getAccountNumber(),kPrivBank));
     		this.atmName = this.currAcct.getOwner();
+    		System.out.println("Got owner");
+    		BankServer.log.write("Got owner");
     		//The bank then send a challenge to verify identity
     		//(sign it)
     		msg = getAuthenticationMessage();
     		smsg = new SignedMessage (msg, this.kPrivBank, crypto);
     		
+    		System.out.println("Sending challenge");
+    		BankServer.log.write("Sending challenge");
     		os.writeObject(smsg);
-    		System.out.println("Signed Challenge sent");
     		
 		} catch (Exception exc) {
 			exc.printStackTrace();
+			System.out.println("Error with first message");
+			BankServer.log.write("Error with first message");
 			return false;
 		}
     	
     //Then, the bank now wait for the answer
     	try {
-			System.out.println("Waiting for challenge's response");
+			System.out.println("Waiting for response");
+			BankServer.log.write("Waiting for response");
 			//Get back the signed message, and verify it 
 			msg = readChallengeClient();
 			if (msg.isSuccess()) {
 				System.out.println("response received");
+				BankServer.log.write("response received");
 				//Then the bank can now send the shared AES key
 				msg = getAuthenticationMessage();
 				this.kSession = crypto.makeAESKey();
@@ -104,16 +113,21 @@ public class BankSession implements Session, Runnable {
 				//Sign the message
 				smsg = new SignedMessage (msg, this.kPrivBank, crypto);
 				
-				System.out.println("Sending shared key");
+				System.out.println("Sending accept (with shared key)");
+				BankServer.log.write("Sending accept (with shared key)");
 				os.writeObject(smsg);
 				System.out.println("Authentication over");
 			}
 			else {
+				System.out.println("Error with challenge !");
+				BankServer.log.write("Error with challenge !");
 				return false;
 			}
 		} catch (Exception e)
 		{
 			e.printStackTrace();
+			System.out.println("Error with challenge !");
+			BankServer.log.write("Error with challenge !");
 			return false;
 		}
     	  
