@@ -104,6 +104,7 @@ public class ATMSession implements Session {
 				this.kSession = (Key)crypto.decryptRSA(msg.getSessionKey(), kUser);
 				System.out.println("Shared key obtained");
 				System.out.println("Authentication over");
+				System.out.println("Welcome "+msg.getAccountName());
 			}
 			else {
 				return false;
@@ -300,7 +301,7 @@ public class ATMSession implements Session {
 	}
 	
 	/**
-	 * Reads, verifies, and returns a transaction message received from the
+	 * Reads, verifies, and returns an authentication message received from the
 	 * bank server.
 	 */
 	AuthenticationMessage readAuthenticationMessage()
