@@ -1,4 +1,4 @@
-import java.util.Date;
+
 
 /**
  * Bean that is used for transmitting transaction messages
