@@ -198,7 +198,7 @@ public class BankSession implements Session, Runnable {
 			c.add(Calendar.SECOND, 30);
 			if (message.getBankNonce() != this.bankNonce ||
 				new Date().getTime() > c.getTimeInMillis() || 
-				!crypto.verify((byte[])msg.getObject(), msg.signature, 
+				!crypto.verify(msg.msg, msg.signature, 
 												this.currAcct.getKey()))
 			{
 				throw new RuntimeException("Invalid message received!!!");

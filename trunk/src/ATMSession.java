@@ -101,7 +101,6 @@ public class ATMSession implements Session {
 			if (msg.isSuccess()) {
 				System.out.println("Received");
 				//The ATM get back the shared AES key
-				msg = getAuthenticationMessage();
 				this.kSession = (Key)crypto.decryptRSA(msg.getSessionKey(), kUser);
 				System.out.println("Shared key obtained");
 				System.out.println("Authentication over");
