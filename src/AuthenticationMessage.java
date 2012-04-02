@@ -9,12 +9,19 @@ public class AuthenticationMessage extends GeneralMessage {
 	private String atmID;
 	private byte[] sessionKey;
 	private byte[] accountNumber;
+	private String accountName;
 	
 	public byte[] getAccountNumber() {
 		return accountNumber;
 	}
 	public void setAccountNumber(byte[] accountNumber) {
 		this.accountNumber = accountNumber;
+	}
+	public String getAccountName() {
+		return accountName;
+	}
+	public void setAccountName(String accountName) {
+		this.accountName = accountName;
 	}
 	public String getAtmID() {
 		return atmID;

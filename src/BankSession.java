@@ -18,6 +18,7 @@ public class BankSession implements Session, Runnable {
     private Key kSession;
     private Account currAcct;
     private String atmID;
+    private String atmName;
 
     // Add additional fields you need here
     private int atmNonce;
@@ -73,9 +74,9 @@ public class BankSession implements Session, Runnable {
     		this.atmID = msg.getAtmID();
     		this.atmNonce = msg.getAtmNonce();
     		
-    		//The bank get back the account number
+    		//The bank get back the account number and account name
     		this.currAcct=this.accts.getAccount((String)crypto.decryptRSA(msg.getAccountNumber(),kPrivBank));
-    		
+    		this.atmName = this.currAcct.getOwner();
     		//The bank then send a challenge to verify identity
     		//(sign it)
     		msg = getAuthenticationMessage();
@@ -238,6 +239,7 @@ public class BankSession implements Session, Runnable {
 		message.setAtmNonce(this.atmNonce);
 		message.setBankNonce(getBankNonce());
 		message.setTimestamp(new Date());
+		message.setAccountName(this.atmName);
 		
 		return message;	
 	}
