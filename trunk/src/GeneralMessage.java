@@ -1,7 +1,7 @@
 import java.util.Date;
 
 /**
- * Represents the comon attributes between AuthenticationMessage
+ * Represents the common attributes between AuthenticationMessage
  * and TransactionMessage.
  */
 public abstract class GeneralMessage implements Message {

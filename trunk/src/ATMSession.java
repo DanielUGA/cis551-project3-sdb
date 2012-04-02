@@ -277,17 +277,20 @@ public class ATMSession implements Session {
 			message = (TransactionMessage)
 					crypto.decryptAES((byte[])msg.getObject(), kSession);
 		
-			// Verify the message by checking the nonce, timestamp,
-			// and signature.
-			Calendar c = Calendar.getInstance();
-			c.setTime(message.getTimestamp());
-			c.add(Calendar.SECOND, 30);
-			if (message.getAtmNonce() != this.atmNonce ||
-				new Date().getTime() > c.getTimeInMillis() ||
-				!crypto.verify(msg.msg, msg.signature, kBank))
-			{
+			if (!doBasicTests(message, msg)) {
 				throw new RuntimeException("Invalid message received!!!");
-			}
+			}	
+//			// Verify the message by checking the nonce, timestamp,
+//			// and signature.
+//			Calendar c = Calendar.getInstance();
+//			c.setTime(message.getTimestamp());
+//			c.add(Calendar.SECOND, 30);
+//			if (message.getAtmNonce() != this.atmNonce ||
+//				new Date().getTime() > c.getTimeInMillis() ||
+//				!crypto.verify(msg.msg, msg.signature, kBank))
+//			{
+//				throw new RuntimeException("Invalid message received!!!");
+//			}
 		}
 		catch (Exception exc) {
 			throw new RuntimeException(exc);
@@ -310,18 +313,22 @@ public class ATMSession implements Session {
 			
 			message = (AuthenticationMessage) msg.getObject();
 			
-			// Verify the message by checking the nonce, timestamp,
-			// and signature.
-			Calendar c = Calendar.getInstance();
-			c.setTime(message.getTimestamp());
-			c.add(Calendar.SECOND, 30);
 			
-			if (message.getAtmNonce() != this.atmNonce ||
-				new Date().getTime() > c.getTimeInMillis() ||
-				!crypto.verify(msg.msg, msg.signature, kBank))
-			{
+			if (!doBasicTests(message, msg)) {
 				throw new RuntimeException("Invalid message received!!!");
-			}
+			}		
+//			// Verify the message by checking the nonce, timestamp,
+//			// and signature.
+//			Calendar c = Calendar.getInstance();
+//			c.setTime(message.getTimestamp());
+//			c.add(Calendar.SECOND, 30);
+//			
+//			if (message.getAtmNonce() != this.atmNonce ||
+//				new Date().getTime() > c.getTimeInMillis() ||
+//				!crypto.verify(msg.msg, msg.signature, kBank))
+//			{
+//				throw new RuntimeException("Invalid message received!!!");
+//			}
 		}
 		catch (Exception exc) {
 			throw new RuntimeException(exc);
@@ -329,6 +336,31 @@ public class ATMSession implements Session {
 		message.setSuccess(true);
 		this.bankNonce = message.getBankNonce();
 		return message;
+	}
+	
+	/**
+	 * Check the nonce, the timestamp and the signature
+	 */
+	boolean doBasicTests(GeneralMessage message, SignedMessage msg) {
+		
+		Calendar c = Calendar.getInstance();
+		c.setTime(message.getTimestamp());
+		c.add(Calendar.SECOND, 30);
+		
+		try {
+			if (message.getAtmNonce() != this.atmNonce ||
+					new Date().getTime() > c.getTimeInMillis() ||
+					!crypto.verify(msg.msg, msg.signature, kBank))
+			{
+				return false;
+			}
+			else {
+				return true;
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
 	}
 	
 	/**
