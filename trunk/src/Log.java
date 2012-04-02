@@ -14,22 +14,19 @@ import java.io.Serializable;
 public class Log {
 
 	private Crypto crypto;
-	private FileOutputStream outputStream;
-	private FileInputStream inputStream;
-	private ObjectInputStream ois;
 	private PublicKey key;
+	private FileOutputStream outputStream;
 	public byte[] aesKey;
 
 	// You may add more state here.
-	public static final String keyFile = "log.key";
 	private Key logKey;
 
 	public Log(String file, PublicKey key) 
 	{
 		try {
 			this.crypto = new Crypto();
-			//this.key = key;
-			logKey = (Key)Disk.load(keyFile);
+			//this.key = key;	
+		    logKey = crypto.makeAESKey();
 			this.aesKey = crypto.encryptRSA(logKey, key);
 			outputStream = new FileOutputStream(file);
 
@@ -40,7 +37,7 @@ public class Log {
 	}
 
 	public void write(Serializable obj) {
-		System.out.println(obj.toString());
+		System.out.println("writing to log "+obj.toString());
 		try {
 			outputStream= new FileOutputStream(BankServer.logFile, true);
 			ObjectOutputStream oos = new ObjectOutputStream(outputStream);
@@ -53,23 +50,25 @@ public class Log {
 		}
 	}
 
-	public void print(String file, Key logKey) {
+	public void print(Key logKey) {
+		FileInputStream inputStream = null;
+		ObjectInputStream ois = null;
 		//decrypt the contents of the log file
 		//boolean isEndofFile = false;
 		try {
-			inputStream = new FileInputStream(BankServer.logFile);
+			inputStream =new FileInputStream(BankServer.logFile);
 			ois = new ObjectInputStream(inputStream);
 			Object obj = null;
-			try{
-				while(ois.available()!=0) {
+				while((obj = ois.readObject()) != null) {
 					obj=ois.readObject();
-					System.out.println(crypto.decryptAES(obj.toString().getBytes(), logKey));
-				}
+					System.out.println(crypto.decryptAES(((LogMessage)obj).toString().getBytes(), logKey));
+			}
+		}catch (EOFException ex) { //This exception will be caught when EOF is reached
+	            System.out.println("End of file reached.");
 			}
 			catch (ClassNotFoundException e) {
 				e.printStackTrace();
 			}
-		}
 		catch (IOException ex) {
 			ex.printStackTrace();
 		}
@@ -79,10 +78,9 @@ public class Log {
 			//Close the ObjectInputStream
 			try {
 				if (ois != null) {
-					ois.close();
-				}
-				if(inputStream!=null)
+					ois.close();				
 					inputStream.close();
+				}
 			} catch (IOException ex) {
 				ex.printStackTrace();
 			}
