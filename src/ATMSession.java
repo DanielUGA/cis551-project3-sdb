@@ -74,26 +74,22 @@ public class ATMSession implements Session {
 		//The ATM get back the server's challenge
 		try {
 			System.out.println("Waiting for the bank's response");
-			msg = readAuthenticationMessage();
-			//If the message is indeed coming from the bank
-			if (msg.isSuccess()) {
-				System.out.println("Challenge received");
-				msg = getAuthenticationMessage();
-				//We sign it with the client's private key
-				smsg = new SignedMessage(msg, this.kUser, crypto);
+			msg = (AuthenticationMessage) is.readObject();
+			this.bankNonce=msg.getBankNonce();
+			System.out.println("Challenge received");
+			msg = getAuthenticationMessage();
+			//We sign it with the client's private key
+			smsg = new SignedMessage(msg, this.kUser, crypto);
 				
-				System.out.println("Response sent");
-				os.writeObject(smsg);
-			}
-			else {
-				return false;
-			}
+			System.out.println("Response sent");
+			os.writeObject(smsg);
 		} catch (Exception e) {
 			e.printStackTrace();
 			return false;
 		}
 		
-		//Now we get the challenge for the client's authentication
+		//Now we wait for the shared key and the confirmation that 
+		//this is indeed the bank
 		try {
 			System.out.println("Waiting for the shared key");
 			msg = readAuthenticationMessage();
@@ -281,17 +277,6 @@ public class ATMSession implements Session {
 			if (!doBasicTests(message, msg)) {
 				throw new RuntimeException("Invalid message received!!!");
 			}	
-//			// Verify the message by checking the nonce, timestamp,
-//			// and signature.
-//			Calendar c = Calendar.getInstance();
-//			c.setTime(message.getTimestamp());
-//			c.add(Calendar.SECOND, 30);
-//			if (message.getAtmNonce() != this.atmNonce ||
-//				new Date().getTime() > c.getTimeInMillis() ||
-//				!crypto.verify(msg.msg, msg.signature, kBank))
-//			{
-//				throw new RuntimeException("Invalid message received!!!");
-//			}
 		}
 		catch (Exception exc) {
 			throw new RuntimeException(exc);
@@ -318,18 +303,6 @@ public class ATMSession implements Session {
 			if (!doBasicTests(message, msg)) {
 				throw new RuntimeException("Invalid message received!!!");
 			}		
-//			// Verify the message by checking the nonce, timestamp,
-//			// and signature.
-//			Calendar c = Calendar.getInstance();
-//			c.setTime(message.getTimestamp());
-//			c.add(Calendar.SECOND, 30);
-//			
-//			if (message.getAtmNonce() != this.atmNonce ||
-//				new Date().getTime() > c.getTimeInMillis() ||
-//				!crypto.verify(msg.msg, msg.signature, kBank))
-//			{
-//				throw new RuntimeException("Invalid message received!!!");
-//			}
 		}
 		catch (Exception exc) {
 			throw new RuntimeException(exc);

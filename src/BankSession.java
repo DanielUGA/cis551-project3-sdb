@@ -82,13 +82,11 @@ public class BankSession implements Session, Runnable {
     		System.out.println("Got owner");
     		BankServer.log.write("Got owner");
     		//The bank then send a challenge to verify identity
-    		//(sign it)
     		msg = getAuthenticationMessage();
-    		smsg = new SignedMessage (msg, this.kPrivBank, crypto);
     		
     		System.out.println("Sending challenge");
     		BankServer.log.write("Sending challenge");
-    		os.writeObject(smsg);
+    		os.writeObject(msg);
     		
 		} catch (Exception exc) {
 			exc.printStackTrace();
