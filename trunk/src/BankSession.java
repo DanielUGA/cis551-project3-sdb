@@ -64,58 +64,88 @@ public class BankSession implements Session, Runnable {
 
 	// The server waits for the ATM's message, and then check
     // the account number
+    	
     AuthenticationMessage msg = null;
     SignedMessage smsg = null;
+    AuthenticationLogMessage logmess = new AuthenticationLogMessage();
+    logmess.setTimestamp(new Date());
+    StringBuilder op = new StringBuilder();
+    
     	try {
     		//Receiving the atmID and the encrypted account number
     		BankServer.log.write("Waiting for first message");
+    		op.append("Waiting for first message");
+    
     		msg = (AuthenticationMessage) is.readObject();
+    		
     		BankServer.log.write("Got first message from ATM #"+msg.getAtmID());
+    		op.append("Got first message from ATM #"+msg.getAtmID());
     		this.atmID = msg.getAtmID();
+    		logmess.setAtmID(this.atmID);
     		this.atmNonce = msg.getAtmNonce();
+    		
     		
     		//The bank get back the account number and account name
     		this.currAcct=this.accts.getAccount((String)crypto.decryptRSA(msg.getAccountNumber(),kPrivBank));
+    		logmess.setAccountNumber(this.currAcct.getNumber());
     		this.atmName = this.currAcct.getOwner();
     		BankServer.log.write("Got owner");
+    		op.append("Got owner");
+    		
     		//The bank then send a challenge to verify identity
     		msg = getAuthenticationMessage();
     		
     		BankServer.log.write("Sending challenge");
+    		op.append("Sending challenge");
     		os.writeObject(msg);
     		
 		} catch (Exception exc) {
 			exc.printStackTrace();
 			BankServer.log.write("Error with first message");
+			op.append("Error with first message");
+			logmess.setSteps(op.toString());
 			return false;
 		}
     	
     //Then, the bank now wait for the answer
     	try {
 			BankServer.log.write("Waiting for response");
+			op.append("Waiting for response");
+			
 			//Get back the signed message, and verify it 
 			msg = readChallengeClient();
 			if (msg.isSuccess()) {
 				BankServer.log.write("response received");
+				op.append("response received");
+				
 				//Then the bank can now send the shared AES key
 				msg = getAuthenticationMessage();
 				this.kSession = crypto.makeAESKey();
+				logmess.setSkey(this.kSession);
 				msg.setSessionKey(crypto.encryptRSA(kSession, currAcct.kPub));
 				//Sign the message
 				smsg = new SignedMessage (msg, this.kPrivBank, crypto);
 				
 				BankServer.log.write("Sending accept (with shared key)");
+				op.append("Sending accept (with shared key)");
+				
 				os.writeObject(smsg);
 				System.out.println("Authentication over");
+				op.append("Authentication over");
+				logmess.setSteps(op.toString());
 			}
 			else {
 				BankServer.log.write("Error with challenge !");
+				op.append("Error with challenge !");
+				logmess.setSteps(op.toString());
 				return false;
 			}
 		} catch (Exception e)
 		{
 			e.printStackTrace();
 			BankServer.log.write("Error with challenge !");
+			op.append("Error with challenge !");
+			logmess.setSteps(op.toString());
 			return false;
 		}
     	  
