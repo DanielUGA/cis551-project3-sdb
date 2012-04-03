@@ -77,9 +77,10 @@ public class ATMSession implements Session {
 			msg = (AuthenticationMessage) is.readObject();
 			this.bankNonce=msg.getBankNonce();
 			System.out.println("Challenge received");
-			msg = getAuthenticationMessage();
+			AuthenticationMessage msgResponse = getAuthenticationMessage();
+			msgResponse.setChallenge(crypto.encryptRSA(msg.getChallenge(), this.kBank));
 			//We sign it with the client's private key
-			smsg = new SignedMessage(msg, this.kUser, crypto);
+			smsg = new SignedMessage(msgResponse, this.kUser, crypto);
 				
 			System.out.println("Response sent");
 			os.writeObject(smsg);
@@ -323,7 +324,7 @@ public class ATMSession implements Session {
 		
 		try {
 			if (message.getAtmNonce() != this.atmNonce ||
-					new Date().getTime() > c.getTimeInMillis() ||
+					System.currentTimeMillis() > c.getTimeInMillis() ||
 					!crypto.verify(msg.msg, msg.signature, kBank))
 			{
 				return false;

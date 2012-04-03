@@ -54,6 +54,6 @@ public class BankServer {
 				e.printStackTrace();
 			}
 			*/
-    	//log.print(logKey);
+    	log.print(logKey);
     }
 }

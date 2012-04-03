@@ -9,6 +9,7 @@ public class AuthenticationMessage extends GeneralMessage {
 	private String atmID;
 	private byte[] sessionKey;
 	private byte[] accountNumber;
+	private byte[] challenge;
 	private String accountName;
 	
 	public byte[] getAccountNumber() {
@@ -34,5 +35,11 @@ public class AuthenticationMessage extends GeneralMessage {
 	}
 	public void setSessionKey(byte[] sessionKey) {
 		this.sessionKey = sessionKey;
+	}
+	public byte[] getChallenge() {
+		return challenge;
+	}
+	public void setChallenge(byte[] challenge) {
+		this.challenge = challenge;
 	}
 }
