@@ -3,6 +3,8 @@ import java.security.KeyException;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.HashMap;
+import java.util.Map;
 import java.io.EOFException;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -42,7 +44,7 @@ public class Log {
 
 	//append to the log file
 	public void write(Serializable obj) {
-		System.out.println("writing to log "+obj.toString());
+		System.out.println(obj.toString());
 		try {
 			FileOutputStream outputStream = null;
 			outputStream= new FileOutputStream(file, true);
@@ -56,43 +58,54 @@ public class Log {
 		}
 	}
 
-	
-	/**
-	 * //for log viewer
 	 public void print(Key logKey) {
 		FileInputStream inputStream = null;
 		ObjectInputStream ois = null;
+		Map<String, AuthenticationLogMessage> map = new HashMap<String,AuthenticationLogMessage>();
 		//decrypt the contents of the log file
 		//boolean isEndofFile = false;
 		try {
 			inputStream =new FileInputStream(BankServer.logFile);
 			ois = new ObjectInputStream(inputStream);
 			Object obj = null;
-				while((obj = ois.readObject()) != null) {
-					obj=ois.readObject();
-					System.out.println(crypto.decryptAES(((LogMessage)obj).toString().getBytes(), logKey));
+			
+			while((obj = ois.readObject()) != null) {
+				obj=crypto.decryptAES((byte[])ois.readObject(), logKey);
+				if (obj instanceof AuthenticationLogMessage) {
+					AuthenticationLogMessage m = (AuthenticationLogMessage)obj;
+					if (m.getAcctNumber() != null)
+						map.put(m.getAcctNumber()+m.getAtmID(), m);
+					System.out.println(m);
+				}
+				else if (obj instanceof TransactionLogMessage) {
+					System.out.println(obj);
+				}
 			}
-		}catch (EOFException ex) { //This exception will be caught when EOF is reached
-	            System.out.println("End of file reached.");
-			}
-			catch (ClassNotFoundException e) {
-				e.printStackTrace();
-			}
+			
+		} 
+		catch (EOFException ex) { //This exception will be caught when EOF is reached
+	           System.out.println("End of file reached.");
+		}
+		catch (ClassNotFoundException e) {
+			e.printStackTrace();
+		}
 		catch (IOException ex) {
 			ex.printStackTrace();
 		}
 		catch (KeyException e) {
 			e.printStackTrace();
-		} finally {
+		} 
+		finally {
 			//Close the ObjectInputStream
 			try {
 				if (ois != null) {
 					ois.close();				
 					inputStream.close();
 				}
-			} catch (IOException ex) {
+			} 
+			catch (IOException ex) {
 				ex.printStackTrace();
 			}
 		}
-	}*/
+	}
 }

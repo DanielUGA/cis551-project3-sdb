@@ -4,13 +4,14 @@ import java.util.Date;
 /**
  * Message that will be used for logging.
  */
-public class LogMessage implements Message {
+public class TransactionLogMessage implements Message {
 	private static final long serialVersionUID = 1;
 	private Date timestamp;
 	private int action;
 	private boolean successful;
 	private double amount;
 	private String acctNumber;
+	private String atmID;
 	public Date getTimestamp() {
 		return timestamp;
 	}
@@ -41,6 +42,13 @@ public class LogMessage implements Message {
 	}
 	public void setAcctNumber(String acctNumber) {
 		this.acctNumber = acctNumber;
+	}
+	
+	public String getAtmID() {
+		return atmID;
+	}
+	public void setAtmID(String atmID) {
+		this.atmID = atmID;
 	}
 	@Override
 	public String toString() {
