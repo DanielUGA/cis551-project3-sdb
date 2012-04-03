@@ -15,12 +15,15 @@ public class Log {
 
 	private Crypto crypto;
 	private PublicKey key;
-	private FileOutputStream outputStream;
-	public byte[] aesKey;
+	private byte[] aesKey;
+	private String file;
 
 	// You may add more state here.
-	private Key logKey;
+	private Key logKey;			
+    public static final String logkeyFile = "log.key";	
 
+    //generates an AES key for encrypting the log contents
+    //the key is encrypted with the bank's public key and saved in the log.key file
 	public Log(String file, PublicKey key) 
 	{
 		try {
@@ -28,7 +31,8 @@ public class Log {
 			//this.key = key;	
 		    logKey = crypto.makeAESKey();
 			this.aesKey = crypto.encryptRSA(logKey, key);
-			outputStream = new FileOutputStream(file);
+		    Disk.save(aesKey, logkeyFile);
+			this.file=file;
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -36,10 +40,12 @@ public class Log {
 		}
 	}
 
+	//append to the log file
 	public void write(Serializable obj) {
 		System.out.println("writing to log "+obj.toString());
 		try {
-			outputStream= new FileOutputStream(BankServer.logFile, true);
+			FileOutputStream outputStream = null;
+			outputStream= new FileOutputStream(file, true);
 			ObjectOutputStream oos = new ObjectOutputStream(outputStream);
 			oos.writeObject(crypto.encryptAES(obj.toString().getBytes(), logKey));
 			oos.close();
@@ -50,7 +56,10 @@ public class Log {
 		}
 	}
 
-	public void print(Key logKey) {
+	
+	/**
+	 * //for log viewer
+	 public void print(Key logKey) {
 		FileInputStream inputStream = null;
 		ObjectInputStream ois = null;
 		//decrypt the contents of the log file
@@ -85,5 +94,5 @@ public class Log {
 				ex.printStackTrace();
 			}
 		}
-	}
+	}*/
 }
