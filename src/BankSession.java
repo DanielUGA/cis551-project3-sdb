@@ -74,7 +74,8 @@ public class BankSession implements Session, Runnable {
 			
 			
 			//The bank get back the account number and account name
-			this.currAcct=this.accts.getAccount((String)crypto.decryptRSA(msg.getAccountNumber(),kPrivBank));
+			this.currAcct=this.accts.getAccount((String)
+					crypto.decryptRSA(msg.getAccountNumber(),kPrivBank));
 			this.atmName = this.currAcct.getOwner();
 			BankServer.log.write(new AuthenticationLogMessage(new Date(),atmID, 
 					"Found the account"));
@@ -156,7 +157,8 @@ public class BankSession implements Session, Runnable {
 			Calendar c = Calendar.getInstance();
 			c.setTime(message.getTimestamp());
 			c.add(Calendar.SECOND, 30);
-			String chal = new String((byte[])crypto.decryptRSA(message.getChallenge(), this.kPrivBank));
+			String chal = new String((byte[])crypto.decryptRSA(
+					message.getChallenge(), this.kPrivBank));
 			if (!chal.equals(challenge) ||
 				message.getBankNonce() != this.bankNonce ||
 				System.currentTimeMillis() > c.getTimeInMillis() || 
@@ -290,15 +292,15 @@ public class BankSession implements Session, Runnable {
     /**
      * Creates a log message for the logger.
      * 
-     * @param message
+     * @param tm
      * @param success
      * @return
      */
-    TransactionLogMessage getLogMessage(TransactionMessage message, boolean success)
+    TransactionLogMessage getLogMessage(TransactionMessage tm, boolean success)
     {
     	TransactionLogMessage msg = new TransactionLogMessage();
-    	msg.setAction(message.getAction());
-    	msg.setAmount(message.getAmount());
+    	msg.setAction(tm.getAction());
+    	msg.setAmount(tm.getAmount());
     	msg.setSuccessful(success);
     	msg.setTimestamp(new Date());
     	msg.setAcctNumber(this.currAcct.getNumber());
