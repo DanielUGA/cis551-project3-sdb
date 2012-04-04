@@ -2,16 +2,16 @@
 # Usage
 #
 Bank Server Script:
-	javac *.java
-	java BankServer -classpath bcprov-jdk15on-147.jar
+	javac -classpath bcprov-jdk15on-147.jar *.java
+	java -classpath bcprov-jdk15on-147.jar:. BankKeys
+	java -classpath bcprov-jdk15on-147.jar:. MakeAccounts
+	java -classpath bcprov-jdk15on-147.jar:. BankServer > server.log &
 
-ATM Script:
-	javac *.java
-	java ATMClient -classpath bcprov-jdk15on-147.jar
+ATM Script (After Bank Server instructions above):
+	java -classpath bcprov-jdk15on-147.jar:. ATMClient 1 localhost
 
-Read Log File:
-	javac *.java
-	java Log -classpath bcprov-jdk15on-147.jar
+Read Log File (After Bank Server instructions above):
+	java -classpath bcprov-jdk15on-147.jar:. Log
 
 #
 # Group created classes
