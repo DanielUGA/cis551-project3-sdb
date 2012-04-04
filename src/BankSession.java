@@ -95,7 +95,7 @@ public class BankSession implements Session, Runnable {
 			return false;
 		}
 	    	
-	    //Then, the bank now wait for the answer
+	    //The bank now waits for the answer
     	try {
 			BankServer.log.write(new AuthenticationLogMessage(new Date(),atmID, 
     				"Waiting for response"));
