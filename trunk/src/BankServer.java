@@ -9,12 +9,11 @@ public class BankServer {
     public static final String logFile = "bank.log";
     private static KeyPair pair = null;
     public static Log log = null;
-    private static Crypto crypto;
     
     static {
 	try {
 	    pair = (KeyPair)Disk.load(keyPairFile);
-	    log = new Log(logFile, pair.getPublic());
+	    log = new Log(logFile, pair);
 	} catch (IOException e) {
 	    e.printStackTrace();
 	    System.exit(1);
@@ -42,18 +41,15 @@ public class BankServer {
 	    e.printStackTrace();
 	    System.exit(1);
 	}
-    }
-    
-    public static void logViewer(Key logKey){
-    	/**crypto=new Crypto(); //decrypt the log key with bank's private key and use for aes decryption
-	    Key logKey=null;
-			try {
-				logKey = (Key) crypto.decryptRSA(log.aesKey, pair.getPrivate());
-			} catch (KeyException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			*/
-    	log.print(logKey);
+	finally
+	{
+		try {
+			log.close();
+		}
+		catch (Exception exc)
+		{
+			exc.printStackTrace();
+		}
+	}
     }
 }

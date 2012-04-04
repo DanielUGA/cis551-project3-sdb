@@ -53,7 +53,6 @@ public class ATMSession implements Session {
 		    return false;
 		}
 		
-		//The ATM tries first then to authenticate the client
 		AuthenticationMessage msg = null;
 		SignedMessage smsg = null;
 		
@@ -378,23 +377,31 @@ public class ATMSession implements Session {
 	public boolean doTransaction() {
 		printMenu();
 		int x = getSelection();
-		switch (x) {
-		case 1:
-			doDeposit();
-			break;
-		case 2:
-			doWithdrawal();
-			break;
-		case 3:
-			doBalance();
-			break;
-		case 4: {
-			endSession();
+		try {
+			switch (x) {
+			case 1:
+				doDeposit();
+				break;
+			case 2:
+				doWithdrawal();
+				break;
+			case 3:
+				doBalance();
+				break;
+			case 4: {
+				endSession();
+				return false;
+			}
+			default: {
+				System.out.println("Invalid choice.  Please try again.");
+			}
+			}
+		}
+		catch (Exception exc) {
+			// If there is an exception during the transaction, end the
+			// session and start over.
+			System.out.println("Server failure, please log in again.");
 			return false;
-		}
-		default: {
-			System.out.println("Invalid choice.  Please try again.");
-		}
 		}
 		return true;
 	}
