@@ -27,7 +27,7 @@ AuthenticationLogMessage.java - Class that contains information necessary to
 AuthenticationMessage.java - Class that contains the information that is sent
     between the ATM and Bank Server during the authentication process.  This
     includes the Account ID for the first message, the challenge field for the
-    second to messages, and finally a field for the session key for the final
+    second to fourth messages, and a field containing the session key for the final
     message.  Additional fields such as timestamps and nonces are contained in
     the parent class.
     
@@ -40,7 +40,7 @@ TransactionLogMessage - Class that contains information necessary to log the
     ATM, the account number, and whether the requested action was successful.
     
 TransactionMessage - Class that contains the information necessary to make a
-	transaction request and receive the response to that transaction request.
+	transaction request and receive a response to that transaction request.
 	For the request, an actionID and an amount is provided as well as 
 	constants that indicate the selected transaction.  For the response, the
 	TransactionMessage class contains whether or not the transaction was 
