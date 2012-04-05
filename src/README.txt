@@ -145,3 +145,5 @@ TransactionMessage - Class that contains the information necessary to make a
 	TransactionMessage class contains whether or not the transaction was 
 	successful as well as the balance for some transactions.  Additional fields
 	such as timestamps and nonces are contained in the parent class.
+
+cis551-project3.pdf - The report for the project.
