@@ -1,0 +1,1 @@
+Authentication and secure communication between a server, some ATMs and client's smartcard
